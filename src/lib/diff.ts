@@ -136,6 +136,40 @@ export interface WordDiffSegment {
   text: string
 }
 
+export interface DiffTokenKinds {
+  /** Per-token kinds for the old text's tokens, in token order. */
+  old: DiffKind[]
+  /** Per-token kinds for the new text's tokens, in token order. */
+  new: DiffKind[]
+}
+
+/**
+ * Computes a word-level diff and reports the diff kind of every token
+ * (non-whitespace run) on each side, in order. Unlike `diffWords` the tokens
+ * are not merged into segments, so callers can map kinds back onto exact
+ * character ranges of the original text (tokens appear in the same order as
+ * `text.match(/\S+/g)`).
+ */
+export const diffTokens = (oldText: string, newText: string): DiffTokenKinds => {
+  const oldTokens = oldText.match(/\S+/g) ?? []
+  const newTokens = newText.match(/\S+/g) ?? []
+  const oldKinds: DiffKind[] = []
+  const newKinds: DiffKind[] = []
+
+  walkLcsDiff(oldTokens, newTokens, (kind) => {
+    if (kind === 'removed') {
+      oldKinds.push(kind)
+    } else if (kind === 'added') {
+      newKinds.push(kind)
+    } else {
+      oldKinds.push(kind)
+      newKinds.push(kind)
+    }
+  })
+
+  return { old: oldKinds, new: newKinds }
+}
+
 /**
  * Computes a word-level diff between two single lines. Tokens are
  * non-whitespace runs, so the result is whitespace-insensitive. The full

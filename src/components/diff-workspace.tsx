@@ -1,6 +1,5 @@
-import { ArrowLeftToLine, FileDiff, FileText, Sparkles } from 'lucide-react'
-import type { ReactNode } from 'react'
-import { ModeToggle } from '#/components/mode-toggle'
+import { ArrowLeftToLine, Check, Copy, Sparkles } from 'lucide-react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { PromptInput } from '#/components/prompt-input'
 import { Tiptap } from '#/components/tiptap'
 import { Button } from '#/components/ui/button'
@@ -15,7 +14,6 @@ export interface DiffWorkspaceProps {
   isGenerating: boolean
   promptError: string | null
   onSubmitPrompt: (prompt: string) => Promise<void>
-  onLoadSample: () => void
   onUseAsOriginal: () => void
 }
 
@@ -47,6 +45,46 @@ const DiffSummaryPill = ({ diff }: { diff: DiffResult }) => (
   </span>
 )
 
+/** Copies the given text to the clipboard, flashing a check mark on success. */
+const CopyButton = ({ text }: { text: string }) => {
+  const [copied, setCopied] = useState(false)
+  const timeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Clear the pending reset when unmounting mid-flash.
+  useEffect(
+    () => () => {
+      if (timeout.current !== null) {
+        clearTimeout(timeout.current)
+      }
+    },
+    [],
+  )
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      if (timeout.current !== null) {
+        clearTimeout(timeout.current)
+      }
+      timeout.current = setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // Clipboard unavailable (permissions, insecure context) — no feedback.
+    }
+  }
+
+  return (
+    <Button
+      variant="outline"
+      size="icon-sm"
+      aria-label={copied ? 'Copied' : 'Copy to clipboard'}
+      onClick={() => void copy()}
+    >
+      {copied ? <Check className="text-(--diff-added-fg)" /> : <Copy />}
+    </Button>
+  )
+}
+
 const RevisedEmptyState = () => (
   <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
     <div className="flex size-10 items-center justify-center rounded-full bg-muted">
@@ -66,25 +104,10 @@ export const DiffWorkspace = ({
   isGenerating,
   promptError,
   onSubmitPrompt,
-  onLoadSample,
   onUseAsOriginal,
 }: DiffWorkspaceProps) => {
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-background">
-      <header className="flex shrink-0 items-center justify-between gap-4 border-b border-border bg-card px-4 py-2.5">
-        <div className="flex items-center gap-2">
-          <FileDiff className="size-4 text-muted-foreground" />
-          <h1 className="text-sm font-semibold tracking-tight">Skill Diff</h1>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <ModeToggle />
-          <Button variant="outline" size="sm" onClick={onLoadSample}>
-            <FileText data-icon="inline-start" />
-            Load sample skill
-          </Button>
-        </div>
-      </header>
-
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
       <div className="shrink-0 px-4 pt-4">
         <PromptInput onSubmit={onSubmitPrompt} isLoading={isGenerating} error={promptError} />
       </div>
@@ -106,15 +129,18 @@ export const DiffWorkspace = ({
           badge={diff ? <DiffSummaryPill diff={diff} /> : null}
           action={
             revised === null ? undefined : (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onUseAsOriginal}
-                disabled={isGenerating}
-              >
-                <ArrowLeftToLine data-icon="inline-start" />
-                Use as original
-              </Button>
+              <>
+                <CopyButton text={revised} />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onUseAsOriginal}
+                  disabled={isGenerating}
+                >
+                  <ArrowLeftToLine data-icon="inline-start" />
+                  Use as original
+                </Button>
+              </>
             )
           }
         >

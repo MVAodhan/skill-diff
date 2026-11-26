@@ -1,10 +1,19 @@
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
+import { ConvexAuthProvider } from "@convex-dev/auth/react";
+import { HeadContent, Scripts } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
+import { QueryClient } from "@tanstack/react-query";
+import { createRootRouteWithContext } from "@tanstack/react-router";
 
 import appCss from '../styles.css?url'
+import { ConvexReactClient } from "convex/react";
+import { api } from "../../convex/_generated/api";
 
-export const Route = createRootRoute({
+const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL!);
+
+export const Route = createRootRouteWithContext<{
+  queryClient: QueryClient;
+}>()({
   head: () => ({
     meta: [
       {
@@ -28,6 +37,7 @@ export const Route = createRootRoute({
   shellComponent: RootDocument,
 })
 
+
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
@@ -41,19 +51,28 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         />
       </head>
       <body>
-        {children}
-        <TanStackDevtools
-          config={{
-            position: 'bottom-right',
+        <ConvexAuthProvider
+          client={convex}
+          api={{
+            refreshSession: api.auth.refreshSession,
+            signOut: api.auth.signOut,
+            isAuthenticated: api.auth.isAuthenticated,
           }}
-          plugins={[
-            {
-              name: 'Tanstack Router',
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-          ]}
-        />
-        <Scripts />
+        >
+          {children}
+          <TanStackDevtools
+            config={{
+              position: 'bottom-right',
+            }}
+            plugins={[
+              {
+                name: 'Tanstack Router',
+                render: <TanStackRouterDevtoolsPanel />,
+              },
+            ]}
+          />
+          <Scripts />
+        </ConvexAuthProvider>
       </body>
     </html>
   )
