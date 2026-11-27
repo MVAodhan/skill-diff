@@ -3,7 +3,6 @@ allowBuilds:
   esbuild: true
   lightningcss: true
   sharp: true
-  workerd: true
 minimumReleaseAgeExclude:
   - "@tanstack/devtools-vite@0.8.7"
   - "@tanstack/devtools@0.17.0"
