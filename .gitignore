@@ -11,3 +11,5 @@ dist-ssr
 .vinxi
 __unconfig*
 todos.json
+pnpm-workspace.yaml
+pnpm-lock.yaml
